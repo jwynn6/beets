@@ -17,6 +17,8 @@ interface. To invoke the CLI, just call beets.ui.main(). The actual
 CLI commands are implemented in the ui.commands module.
 """
 
+from __future__ import annotations
+
 import errno
 import optparse
 import os.path
@@ -27,6 +29,7 @@ import sys
 import textwrap
 import traceback
 from difflib import SequenceMatcher
+from types import ModuleType
 from typing import Any, Callable
 
 import confuse
@@ -569,7 +572,7 @@ COLOR_NAMES = [
     "text_diff_removed",
     "text_diff_changed",
 ]
-COLORS = None
+COLORS: dict[str, list[str]] | None = None
 
 
 def _colorize(color, text):
@@ -1622,7 +1625,9 @@ optparse.Option.ALWAYS_TYPED_ACTIONS += ("callback",)
 # The main entry point and bootstrapping.
 
 
-def _load_plugins(options, config):
+def _load_plugins(
+    options: optparse.Values, config: config.IncludeLazyConfig
+) -> ModuleType:
     """Load the plugins specified on the command line or in the configuration."""
     paths = config["pluginpath"].as_str_seq(split=False)
     paths = [util.normpath(p) for p in paths]
@@ -1647,6 +1652,9 @@ def _load_plugins(options, config):
         )
     else:
         plugin_list = config["plugins"].as_str_seq()
+        # TODO: Remove in v2.4 or v3
+        if config["musicbrainz"].get().get("enabled"):
+            plugin_list.append("musicbrainz")
 
     # Exclude any plugins that were specified on the command line
     if options.exclude is not None:
